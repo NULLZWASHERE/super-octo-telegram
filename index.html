@@ -126,7 +126,7 @@
       `;
 
       try {
-        const res = await fetch("/api/check", {
+        const res = await fetch("https://fire-checker-atool.valdarvussy.workers.dev/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ combos, webhook })
