@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATOOL • Microsoft Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .terminal { font-family: 'Courier New', monospace; }
+    .glow { text-shadow: 0 0 10px rgb(34 211 238); }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+  <div class="max-w-4xl mx-auto p-6">
+    <!-- Banner -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-3 bg-black border border-cyan-500 rounded-2xl px-8 py-4">
+        <span class="text-4xl">🔥</span>
+        <div>
+          <h1 class="text-5xl font-bold tracking-tighter text-cyan-400 glow">ATOOL</h1>
+          <p class="text-cyan-300 text-sm tracking-[4px] uppercase">Microsoft Checker</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-semibold flex items-center gap-2">
+          <i class="fas fa-shield-alt text-emerald-400"></i>
+          Live Checker
+        </h2>
+        <div id="status" class="text-sm px-4 py-1 bg-zinc-800 rounded-full flex items-center gap-2">
+          <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+          Ready
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <textarea id="combos" rows="10"
+        class="w-full bg-black border border-zinc-700 rounded-2xl p-6 text-sm font-mono resize-none focus:outline-none focus:border-cyan-500 transition-colors"
+        placeholder="email:password&#10;user@hotmail.com:pass123&#10;..."></textarea>
+
+      <div class="mt-4 flex gap-4">
+        <input type="text" id="webhook" 
+          class="flex-1 bg-zinc-900 border border-zinc-700 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:border-cyan-500"
+          placeholder="Discord Webhook URL (optional)">
+        
+        <button onclick="startCheck()" 
+          class="bg-cyan-500 hover:bg-cyan-600 transition-colors text-black font-bold px-10 py-3 rounded-2xl flex items-center gap-2">
+          <i class="fas fa-bolt"></i>
+          START CHECKING
+        </button>
+      </div>
+
+      <!-- Live Results -->
+      <div class="mt-8 grid grid-cols-3 gap-4">
+        <div class="bg-zinc-900 border border-emerald-500/30 rounded-2xl p-6">
+          <div class="text-emerald-400 text-sm mb-1">HITS</div>
+          <div id="hits-count" class="text-5xl font-bold text-emerald-400">0</div>
+        </div>
+        <div class="bg-zinc-900 border border-yellow-500/30 rounded-2xl p-6">
+          <div class="text-yellow-400 text-sm mb-1">2FA</div>
+          <div id="2fa-count" class="text-5xl font-bold text-yellow-400">0</div>
+        </div>
+        <div class="bg-zinc-900 border border-red-500/30 rounded-2xl p-6">
+          <div class="text-red-400 text-sm mb-1">BAD</div>
+          <div id="bad-count" class="text-5xl font-bold text-red-400">0</div>
+        </div>
+      </div>
+
+      <!-- Live Log -->
+      <div class="mt-6">
+        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2">LIVE LOG</div>
+        <div id="log" class="terminal bg-black border border-zinc-800 rounded-2xl p-6 h-96 overflow-y-auto text-sm text-zinc-300"></div>
+      </div>
+    </div>
+
+    <div class="text-center text-zinc-500 text-xs mt-8">
+      ATOOL • Built for Speed • 2026
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "/api/check"; // Change if needed
+
+    function log(message, color = "text-zinc-300") {
+      const logDiv = document.getElementById("log");
+      const time = new Date().toLocaleTimeString();
+      logDiv.innerHTML += `<span class="text-zinc-500">[${time}] </span><span class="${color}">${message}</span><br>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    async function startCheck() {
+      const combosText = document.getElementById("combos").value.trim();
+      const webhook = document.getElementById("webhook").value.trim();
+
+      if (!combosText) {
+        alert("Please enter some combos!");
+        return;
+      }
+
+      const combos = combosText.split('\n').filter(line => line.trim());
+
+      log("Starting Microsoft Checker...", "text-cyan-400");
+      document.getElementById("status").innerHTML = `
+        <div class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+        Running...
+      `;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ combos, webhook })
+        });
+
+        const data = await res.json();
+
+        document.getElementById("hits-count").textContent = data.hits.length;
+        document.getElementById("2fa-count").textContent = data["2fa"].length;
+        document.getElementById("bad-count").textContent = data.bad.length;
+
+        log(`✅ Finished! Hits: ${data.hits.length} | 2FA: ${data["2fa"].length}`, "text-emerald-400");
+
+      } catch (err) {
+        log("❌ Error: " + err.message, "text-red-400");
+      }
+
+      document.getElementById("status").innerHTML = `
+        <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
+        Idle
+      `;
+    }
+
+    // Allow pressing Enter in textarea to start
+    document.getElementById("combos").addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        startCheck();
+      }
+    });
+  </script>
+</body>
+</html>
