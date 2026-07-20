@@ -11,13 +11,8 @@
     }
   ],
   "routes": [
-    {
-      "src": "/api/check",
-      "dest": "/api/check.py"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    }
+    { "src": "/api/check", "dest": "/api/check.py" },
+    { "src": "/api/stream", "dest": "/api/check.py" },
+    { "src": "/", "dest": "/index.html" }
   ]
 }
